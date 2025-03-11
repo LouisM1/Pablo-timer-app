@@ -49,12 +49,24 @@ struct TimerListView: View {
                         
                         Spacer()
                         
-                        Button(action: {
-                            isCreateTimerPresented = true
-                        }) {
-                            Image(systemName: "plus.circle.fill")
-                                .font(.title2)
-                                .foregroundColor(AppTheme.Colors.accentSecondary)
+                        HStack(spacing: 12) {
+                            Button(action: {
+                                withAnimation {
+                                    isEditMode = isEditMode == .active ? .inactive : .active
+                                }
+                            }) {
+                                Image(systemName: isEditMode == .active ? "checkmark.circle.fill" : "arrow.up.arrow.down.circle.fill")
+                                    .font(.title2)
+                                    .foregroundColor(AppTheme.Colors.accentSecondary)
+                            }
+                            
+                            Button(action: {
+                                isCreateTimerPresented = true
+                            }) {
+                                Image(systemName: "plus.circle.fill")
+                                    .font(.title2)
+                                    .foregroundColor(AppTheme.Colors.accentSecondary)
+                            }
                         }
                     }
                     .padding(.horizontal)
@@ -186,12 +198,6 @@ struct TimerListView: View {
                 }
             } message: {
                 Text("Are you sure you want to delete this timer sequence? This action cannot be undone.")
-            }
-            .toolbar {
-                ToolbarItem(placement: .topBarTrailing) {
-                    EditButton()
-                        .foregroundColor(AppTheme.Colors.accentSecondary)
-                }
             }
             .onChange(of: isEditMode) { newValue, oldValue in
                 if newValue != oldValue {

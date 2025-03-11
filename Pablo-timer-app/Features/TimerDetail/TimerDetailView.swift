@@ -36,13 +36,18 @@ struct TimerDetailView: View {
     /// Whether to show the discard changes alert
     @State private var showingDiscardAlert = false
     
+    /// Whether this view is presented in a sheet (don't include NavigationStack)
+    var isPresentedInSheet: Bool = false
+    
     /// Initialize the view with a timer and model context
     /// - Parameters:
     ///   - timer: The timer to display and edit
     ///   - modelContext: The SwiftData model context
-    init(timer: TimerModel, modelContext: ModelContext) {
+    ///   - isPresentedInSheet: Whether this view is presented in a sheet
+    init(timer: TimerModel, modelContext: ModelContext, isPresentedInSheet: Bool = false) {
         self.timer = timer
         self.modelContext = modelContext
+        self.isPresentedInSheet = isPresentedInSheet
         
         // Initialize state variables with timer values
         self._title = State(initialValue: timer.title)
@@ -61,128 +66,159 @@ struct TimerDetailView: View {
     }
     
     var body: some View {
-        NavigationStack {
-            Form {
-                // Basic timer information
-                Section {
-                    TextField("Title", text: $title)
-                        .onChange(of: title) { _, _ in hasChanges = true }
+        Group {
+            if isPresentedInSheet {
+                content
+                    .navigationTitle("Edit Timer")
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button("Cancel") {
+                                if hasChanges {
+                                    showingDiscardAlert = true
+                                } else {
+                                    dismiss()
+                                }
+                            }
+                        }
+                        
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button("Save") {
+                                saveChanges()
+                                dismiss()
+                            }
+                        }
+                    }
+            } else {
+                NavigationStack {
+                    content
+                        .navigationTitle("Edit Timer")
+                        .navigationBarTitleDisplayMode(.inline)
+                        .toolbar {
+                            ToolbarItem(placement: .cancellationAction) {
+                                Button("Cancel") {
+                                    if hasChanges {
+                                        showingDiscardAlert = true
+                                    } else {
+                                        dismiss()
+                                    }
+                                }
+                            }
+                            
+                            ToolbarItem(placement: .confirmationAction) {
+                                Button("Save") {
+                                    saveChanges()
+                                    dismiss()
+                                }
+                            }
+                        }
+                }
+            }
+        }
+        .alert("Discard Changes?", isPresented: $showingDiscardAlert) {
+            Button("Discard", role: .destructive) {
+                dismiss()
+            }
+            Button("Keep Editing", role: .cancel) {
+                showingDiscardAlert = false
+            }
+        } message: {
+            Text("You have unsaved changes. Are you sure you want to discard them?")
+        }
+    }
+    
+    /// The main content of the view
+    private var content: some View {
+        Form {
+            // Basic timer information
+            Section {
+                TextField("Title", text: $title)
+                    .onChange(of: title) { _, _ in hasChanges = true }
+                
+                HStack {
+                    Text("Duration")
+                    Spacer()
                     
+                    // Minutes picker
+                    Picker("Minutes", selection: $durationMinutes) {
+                        ForEach(0..<60) { minute in
+                            Text("\(minute)").tag(minute)
+                        }
+                    }
+                    .pickerStyle(.wheel)
+                    .frame(width: 60)
+                    .clipped()
+                    .onChange(of: durationMinutes) { _, _ in hasChanges = true }
+                    
+                    Text("min")
+                        .foregroundColor(AppTheme.Colors.textSecondary)
+                    
+                    // Seconds picker
+                    Picker("Seconds", selection: $durationSeconds) {
+                        ForEach(0..<60) { second in
+                            Text("\(second)").tag(second)
+                        }
+                    }
+                    .pickerStyle(.wheel)
+                    .frame(width: 60)
+                    .clipped()
+                    .onChange(of: durationSeconds) { _, _ in hasChanges = true }
+                    
+                    Text("sec")
+                        .foregroundColor(AppTheme.Colors.textSecondary)
+                }
+                .padding(.vertical, 8)
+            } header: {
+                Text("Timer Details")
+            }
+            
+            // Recurrence settings
+            Section {
+                Toggle("Recurring Timer", isOn: $isRecurring)
+                    .onChange(of: isRecurring) { _, _ in hasChanges = true }
+                
+                if isRecurring {
                     HStack {
-                        Text("Duration")
-                        Spacer()
+                        Text("Repeat every")
                         
-                        // Minutes picker
-                        Picker("Minutes", selection: $durationMinutes) {
-                            ForEach(0..<60) { minute in
-                                Text("\(minute)").tag(minute)
+                        Picker("Interval", selection: $recurrenceInterval) {
+                            ForEach(1..<31) { interval in
+                                Text("\(interval)").tag(interval)
                             }
                         }
                         .pickerStyle(.wheel)
                         .frame(width: 60)
                         .clipped()
-                        .onChange(of: durationMinutes) { _, _ in hasChanges = true }
+                        .onChange(of: recurrenceInterval) { _, _ in hasChanges = true }
                         
-                        Text("min")
-                            .foregroundColor(AppTheme.Colors.textSecondary)
-                        
-                        // Seconds picker
-                        Picker("Seconds", selection: $durationSeconds) {
-                            ForEach(0..<60) { second in
-                                Text("\(second)").tag(second)
+                        Picker("Frequency", selection: $recurrenceFrequency) {
+                            ForEach(RecurrenceFrequency.allCases, id: \.self) { frequency in
+                                Text(frequency.description).tag(frequency)
                             }
                         }
-                        .pickerStyle(.wheel)
-                        .frame(width: 60)
-                        .clipped()
-                        .onChange(of: durationSeconds) { _, _ in hasChanges = true }
-                        
-                        Text("sec")
-                            .foregroundColor(AppTheme.Colors.textSecondary)
+                        .pickerStyle(.menu)
+                        .onChange(of: recurrenceFrequency) { _, _ in hasChanges = true }
                     }
-                    .padding(.vertical, 8)
-                } header: {
-                    Text("Timer Details")
                 }
-                
-                // Recurrence settings
-                Section {
-                    Toggle("Recurring Timer", isOn: $isRecurring)
-                        .onChange(of: isRecurring) { _, _ in hasChanges = true }
+            } header: {
+                Text("Recurrence")
+            }
+            
+            // Preview section
+            Section {
+                VStack(alignment: .center, spacing: 8) {
+                    Text("Preview")
+                        .font(AppTheme.Typography.caption)
+                        .foregroundColor(AppTheme.Colors.textSecondary)
                     
-                    if isRecurring {
-                        HStack {
-                            Text("Repeat every")
-                            
-                            Picker("Interval", selection: $recurrenceInterval) {
-                                ForEach(1..<31) { interval in
-                                    Text("\(interval)").tag(interval)
-                                }
-                            }
-                            .pickerStyle(.wheel)
-                            .frame(width: 60)
-                            .clipped()
-                            .onChange(of: recurrenceInterval) { _, _ in hasChanges = true }
-                            
-                            Picker("Frequency", selection: $recurrenceFrequency) {
-                                ForEach(RecurrenceFrequency.allCases, id: \.self) { frequency in
-                                    Text(frequency.description).tag(frequency)
-                                }
-                            }
-                            .pickerStyle(.menu)
-                            .onChange(of: recurrenceFrequency) { _, _ in hasChanges = true }
-                        }
-                    }
-                } header: {
-                    Text("Recurrence")
+                    // Use a local preview component instead of TimerChip
+                    TimerPreviewChip(timer: previewTimer)
+                        .scaleEffect(1.5)
+                        .padding(.vertical, 8)
                 }
-                
-                // Preview section
-                Section {
-                    VStack(alignment: .center, spacing: 8) {
-                        Text("Preview")
-                            .font(AppTheme.Typography.caption)
-                            .foregroundColor(AppTheme.Colors.textSecondary)
-                        
-                        // Use a local preview component instead of TimerChip
-                        TimerPreviewChip(timer: previewTimer)
-                            .scaleEffect(1.5)
-                            .padding(.vertical, 8)
-                    }
-                    .frame(maxWidth: .infinity)
-                }
-                .listRowBackground(Color.clear)
+                .frame(maxWidth: .infinity)
             }
-            .navigationTitle("Edit Timer")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") {
-                        if hasChanges {
-                            showingDiscardAlert = true
-                        } else {
-                            dismiss()
-                        }
-                    }
-                }
-                
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") {
-                        saveChanges()
-                        dismiss()
-                    }
-                }
-            }
-            .alert("Discard Changes?", isPresented: $showingDiscardAlert) {
-                Button("Discard", role: .destructive) {
-                    dismiss()
-                }
-                Button("Keep Editing", role: .cancel) {
-                    showingDiscardAlert = false
-                }
-            } message: {
-                Text("You have unsaved changes. Are you sure you want to discard them?")
-            }
+            .listRowBackground(Color.clear)
         }
     }
     

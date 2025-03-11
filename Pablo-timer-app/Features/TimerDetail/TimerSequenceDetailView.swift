@@ -225,16 +225,22 @@ struct TimerSequenceDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .navigationBarTrailing) {
-                EditButton()
-                    .foregroundColor(AppTheme.Colors.accentSecondary)
-            }
-            
-            ToolbarItem(placement: .navigationBarTrailing) {
                 Menu {
                     Button {
                         isAddTimerPresented = true
                     } label: {
                         Label("Add Timer", systemImage: "plus")
+                    }
+                    
+                    Button {
+                        withAnimation {
+                            isEditMode = isEditMode == .active ? .inactive : .active
+                        }
+                    } label: {
+                        Label(
+                            isEditMode == .active ? "Done Reordering" : "Reorder Timers", 
+                            systemImage: isEditMode == .active ? "checkmark" : "arrow.up.arrow.down"
+                        )
                     }
                     
                     Button {
@@ -262,25 +268,18 @@ struct TimerSequenceDetailView: View {
                 }
             }
         }
-        .sheet(isPresented: $isAddTimerPresented) {
+        .sheet(isPresented: $isAddTimerPresented, onDismiss: {
+            // When the sheet is dismissed, save the new timer to the sequence
+            saveNewTimer()
+        }) {
             NavigationStack {
-                TimerDetailView(timer: createNewTimer(), modelContext: modelContext)
-                    .navigationTitle("New Timer")
-                    .navigationBarTitleDisplayMode(.inline)
-                    .toolbar {
-                        ToolbarItem(placement: .cancellationAction) {
-                            Button("Cancel") {
-                                isAddTimerPresented = false
-                            }
-                        }
-                        
-                        ToolbarItem(placement: .confirmationAction) {
-                            Button("Save") {
-                                saveNewTimer()
-                                isAddTimerPresented = false
-                            }
-                        }
-                    }
+                TimerDetailView(
+                    timer: createNewTimer(), 
+                    modelContext: modelContext, 
+                    isPresentedInSheet: true
+                )
+                .navigationTitle("New Timer")
+                .navigationBarTitleDisplayMode(.inline)
             }
             .presentationDetents([.large])
         }
@@ -435,7 +434,7 @@ struct TimerRow: View {
     let modelContext: ModelContext
     
     var body: some View {
-        NavigationLink(destination: TimerDetailView(timer: timer, modelContext: modelContext)) {
+        NavigationLink(destination: TimerDetailView(timer: timer, modelContext: modelContext, isPresentedInSheet: false)) {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(timer.title)
