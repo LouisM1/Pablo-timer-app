@@ -12,6 +12,12 @@ struct TimerListView: View {
     /// The name for a new timer sequence
     @State private var newSequenceName = ""
     
+    /// The timer sequence to be deleted
+    @State private var timerToDelete: TimerSequenceModel?
+    
+    /// Whether the delete confirmation dialog is presented
+    @State private var isShowingDeleteConfirmation = false
+    
     /// Initializes the view with a model context
     /// - Parameter modelContext: The SwiftData model context
     init(modelContext: ModelContext) {
@@ -63,13 +69,22 @@ struct TimerListView: View {
                         ScrollView {
                             LazyVStack(spacing: AppTheme.Layout.padding) {
                                 ForEach(viewModel.timerSequences) { sequence in
-                                    TimerSequenceCard(sequence: sequence) {
-                                        // Navigate to timer detail/start view
-                                        print("Tapped on sequence: \(sequence.name)")
-                                    }
+                                    TimerSequenceCard(
+                                        sequence: sequence,
+                                        onTap: {
+                                            // Navigate to timer detail/start view
+                                            print("Tapped on sequence: \(sequence.name)")
+                                        },
+                                        onDelete: {
+                                            // Show confirmation dialog
+                                            timerToDelete = sequence
+                                            isShowingDeleteConfirmation = true
+                                        }
+                                    )
                                     .contextMenu {
                                         Button(role: .destructive) {
-                                            viewModel.deleteTimerSequence(sequence)
+                                            timerToDelete = sequence
+                                            isShowingDeleteConfirmation = true
                                         } label: {
                                             Label("Delete", systemImage: "trash")
                                         }
@@ -92,6 +107,24 @@ struct TimerListView: View {
                 if viewModel.timerSequences.isEmpty {
                     viewModel.createSampleTimerSequence()
                 }
+            }
+            .confirmationDialog(
+                "Delete Timer",
+                isPresented: $isShowingDeleteConfirmation,
+                titleVisibility: .visible
+            ) {
+                Button("Delete", role: .destructive) {
+                    if let sequence = timerToDelete {
+                        viewModel.deleteTimerSequence(sequence)
+                    }
+                    timerToDelete = nil
+                }
+                
+                Button("Cancel", role: .cancel) {
+                    timerToDelete = nil
+                }
+            } message: {
+                Text("Are you sure you want to delete this timer sequence? This action cannot be undone.")
             }
         }
     }

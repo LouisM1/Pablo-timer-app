@@ -52,9 +52,11 @@ class TimerListViewModel {
         do {
             try modelContext.save()
             fetchTimerSequences()
+            HapticManager.shared.successFeedback()
             return newSequence
         } catch {
             errorMessage = "Failed to save new timer sequence: \(error.localizedDescription)"
+            HapticManager.shared.errorFeedback()
             return newSequence
         }
     }
@@ -67,8 +69,10 @@ class TimerListViewModel {
         do {
             try modelContext.save()
             fetchTimerSequences()
+            HapticManager.shared.successFeedback()
         } catch {
             errorMessage = "Failed to delete timer sequence: \(error.localizedDescription)"
+            HapticManager.shared.errorFeedback()
         }
     }
     
