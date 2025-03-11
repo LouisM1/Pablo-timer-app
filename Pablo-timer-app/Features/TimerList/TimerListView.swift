@@ -91,34 +91,28 @@ struct TimerListView: View {
                     } else {
                         List {
                             ForEach(viewModel.timerSequences) { sequence in
-                                NavigationLink(
-                                    destination: TimerSequenceDetailView(
-                                        sequence: sequence,
-                                        modelContext: viewModel.modelContext
-                                    )
-                                ) {
-                                    TimerSequenceCard(
-                                        sequence: sequence,
-                                        modelContext: viewModel.modelContext,
-                                        onTap: { },
-                                        onDelete: {
-                                            // Show confirmation dialog
-                                            timerToDelete = sequence
-                                            isShowingDeleteConfirmation = true
-                                        },
-                                        onPlay: {
-                                            // Toggle play/pause for this sequence
-                                            if viewModel.isSequenceRunning(sequence) {
-                                                viewModel.pauseSequence()
-                                            } else {
-                                                viewModel.startSequence(sequence)
-                                            }
-                                        },
-                                        isRunning: viewModel.isSequenceRunning(sequence),
-                                        progress: viewModel.progressForSequence(sequence)
-                                    )
-                                }
-                                .buttonStyle(PlainButtonStyle())
+                                TimerSequenceCard(
+                                    sequence: sequence,
+                                    modelContext: viewModel.modelContext,
+                                    onTap: {
+                                        selectedSequence = sequence
+                                    },
+                                    onDelete: {
+                                        // Show confirmation dialog
+                                        timerToDelete = sequence
+                                        isShowingDeleteConfirmation = true
+                                    },
+                                    onPlay: {
+                                        // Toggle play/pause for this sequence
+                                        if viewModel.isSequenceRunning(sequence) {
+                                            viewModel.pauseSequence()
+                                        } else {
+                                            viewModel.startSequence(sequence)
+                                        }
+                                    },
+                                    isRunning: viewModel.isSequenceRunning(sequence),
+                                    progress: viewModel.progressForSequence(sequence)
+                                )
                                 .listRowSeparator(.hidden)
                                 .listRowBackground(Color.clear)
                                 .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
@@ -159,6 +153,12 @@ struct TimerListView: View {
             }
             .sheet(isPresented: $isCreateTimerPresented) {
                 createTimerSheet
+            }
+            .navigationDestination(item: $selectedSequence) { sequence in
+                TimerSequenceDetailView(
+                    sequence: sequence,
+                    modelContext: viewModel.modelContext
+                )
             }
             .refreshable {
                 viewModel.fetchTimerSequences()
