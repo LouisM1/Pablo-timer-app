@@ -4,6 +4,7 @@ import OSLog
 import Combine
 
 /// Manages SwiftData persistence operations for the app
+@MainActor
 final class PersistenceController: ObservableObject {
     private let logger = Logger(subsystem: "com.pablo.timer-app", category: "Persistence")
     
@@ -47,6 +48,7 @@ final class PersistenceController: ObservableObject {
     }
     
     /// Creates a test instance with in-memory storage
+    @MainActor
     static var preview: PersistenceController = {
         let controller = PersistenceController(inMemory: true)
         

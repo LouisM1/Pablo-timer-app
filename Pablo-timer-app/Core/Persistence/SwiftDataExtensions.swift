@@ -28,18 +28,15 @@ extension ModelContext {
     ///   - keyPath: The key path to the ID property
     /// - Returns: True if an entity with the ID exists, false otherwise
     func exists<T: PersistentModel, ID: Equatable>(_ type: T.Type, id: ID, keyPath: KeyPath<T, ID>) throws -> Bool {
-        // Using a string-based predicate instead of a keyPath-based one
+        // Fetch all entities and then filter manually
         // This avoids the issue with keyPath in predicates
-        let descriptor = FetchDescriptor<T>(
-            predicate: #Predicate<T> { $0[keyPath: keyPath] == id }
-        )
+        let descriptor = FetchDescriptor<T>()
+        let results = try fetch(descriptor)
         
-        // Set fetch limit separately
-        var limitedDescriptor = descriptor
-        limitedDescriptor.fetchLimit = 1
-        
-        let results = try fetch(limitedDescriptor)
-        return !results.isEmpty
+        // Check if any entity has the matching ID
+        return results.contains { entity in
+            entity[keyPath: keyPath] == id
+        }
     }
     
     /// Counts the number of entities of a specific type

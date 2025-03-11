@@ -11,6 +11,8 @@ import SwiftData
 @main
 struct Pablo_timer_appApp: App {
     // Use the shared persistence controller
+    // Since PersistenceController is now @MainActor, we need to use @StateObject
+    // which is already main-actor isolated
     @StateObject private var persistenceController = PersistenceController.shared
     
     init() {

@@ -3,6 +3,7 @@ import SwiftData
 import OSLog
 
 /// Manages schema migrations for SwiftData
+@MainActor
 final class MigrationManager {
     private let logger = Logger(subsystem: "com.pablo.timer-app", category: "Migration")
     
