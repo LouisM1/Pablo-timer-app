@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import SwiftData
 
 @main
 struct Pablo_timer_appApp: App {
@@ -13,5 +14,6 @@ struct Pablo_timer_appApp: App {
         WindowGroup {
             ContentView()
         }
+        .modelContainer(for: [TimerModel.self, TimerSequenceModel.self, RecurrenceRule.self])
     }
 }
