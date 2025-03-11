@@ -39,9 +39,18 @@ struct TimerSequenceDetailView: View {
     /// List of actions available in the menu
     @State private var menuActions: [TimerAction] = [.play, .add]
     
+    /// Whether to show the schedule sequence sheet
+    @State private var isScheduleSequencePresented = false
+    
+    /// The days of the week for recurrence
+    @State private var selectedDays: Set<Int> = []
+    
+    /// The time of day for the recurring sequence
+    @State private var scheduledTime = Date()
+    
     /// Custom actions for timer sequences
     enum TimerAction: Identifiable {
-        case play, add, delete, duplicate, rename, `repeat`
+        case play, add, delete, duplicate, rename, `repeat`, schedule
         
         var id: Self { self }
         
@@ -53,6 +62,7 @@ struct TimerSequenceDetailView: View {
             case .duplicate: return "doc.on.doc"
             case .rename: return "pencil"
             case .repeat: return "repeat"
+            case .schedule: return "calendar"
             }
         }
         
@@ -64,6 +74,7 @@ struct TimerSequenceDetailView: View {
             case .duplicate: return "Duplicate Sequence"
             case .rename: return "Rename Sequence"
             case .repeat: return "Repeat Sequence"
+            case .schedule: return "Schedule Sequence"
             }
         }
         
@@ -84,6 +95,21 @@ struct TimerSequenceDetailView: View {
         self.modelContext = modelContext
         self._editingName = State(initialValue: sequence.name)
         self._repeatSequence = State(initialValue: sequence.repeatSequence)
+        
+        // Initialize recurrence state from the recurrence rule if it exists
+        if let rule = sequence.recurrenceRule {
+            if rule.frequency == .weekly {
+                if let weekdays = rule.weekdays {
+                    self._selectedDays = State(initialValue: Set(weekdays))
+                }
+            }
+            if let startDate = rule.startDate {
+                self._scheduledTime = State(initialValue: startDate)
+            }
+            self._menuActions = State(initialValue: [.play, .add, .schedule])
+        } else {
+            self._menuActions = State(initialValue: [.play, .add, .schedule])
+        }
     }
     
     var body: some View {
@@ -130,6 +156,19 @@ struct TimerSequenceDetailView: View {
                     Text("Duration: \(sequence.formattedTotalDuration)")
                         .font(AppTheme.Typography.body)
                         .foregroundColor(AppTheme.Colors.textSecondary)
+                    
+                    // Display recurrence info if present
+                    if let rule = sequence.recurrenceRule, sequence.repeatSequence {
+                        HStack {
+                            Image(systemName: "calendar")
+                                .font(.caption2)
+                                .foregroundColor(AppTheme.Colors.accentSecondary)
+                            
+                            Text(formatRecurrenceInfo(rule))
+                                .font(AppTheme.Typography.caption)
+                                .foregroundColor(AppTheme.Colors.textSecondary)
+                        }
+                    }
                     
                     // Action buttons
                     HStack(spacing: 20) {
@@ -243,6 +282,12 @@ struct TimerSequenceDetailView: View {
                         )
                     }
                     
+                    Button {
+                        isScheduleSequencePresented = true
+                    } label: {
+                        Label("Schedule Sequence", systemImage: "calendar")
+                    }
+                    
                     Button(role: .destructive) {
                         timerToDelete = nil
                         isShowingDeleteConfirmation = true
@@ -270,6 +315,70 @@ struct TimerSequenceDetailView: View {
                 .navigationBarTitleDisplayMode(.inline)
             }
             .presentationDetents([.large])
+        }
+        .sheet(isPresented: $isScheduleSequencePresented) {
+            NavigationStack {
+                Form {
+                    Section {
+                        Toggle("Schedule Recurring", isOn: $repeatSequence)
+                            .onChange(of: repeatSequence) { _, isOn in
+                                if !isOn {
+                                    // If turned off, remove the recurrence rule
+                                    sequence.recurrenceRule = nil
+                                    save()
+                                }
+                            }
+                    } header: {
+                        Text("Recurrence")
+                    }
+                    
+                    if repeatSequence {
+                        Section {
+                            DatePicker("Time", selection: $scheduledTime, displayedComponents: .hourAndMinute)
+                        } header: {
+                            Text("Time of Day")
+                        }
+                        
+                        Section {
+                            VStack(alignment: .leading, spacing: 10) {
+                                Text("Repeat on")
+                                    .font(AppTheme.Typography.body)
+                                    .foregroundColor(AppTheme.Colors.text)
+                                
+                                HStack(spacing: 8) {
+                                    weekdayButton(0, letter: "S")
+                                    weekdayButton(1, letter: "M")
+                                    weekdayButton(2, letter: "T")
+                                    weekdayButton(3, letter: "W")
+                                    weekdayButton(4, letter: "T")
+                                    weekdayButton(5, letter: "F")
+                                    weekdayButton(6, letter: "S")
+                                }
+                            }
+                            .padding(.vertical, 4)
+                        } header: {
+                            Text("Days")
+                        }
+                    }
+                }
+                .navigationTitle("Schedule Sequence")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button("Cancel") {
+                            isScheduleSequencePresented = false
+                        }
+                    }
+                    
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Save") {
+                            saveRecurrenceSettings()
+                            isScheduleSequencePresented = false
+                        }
+                    }
+                }
+            }
+            .presentationDetents([.medium])
         }
         .confirmationDialog(
             "Delete Timer",
@@ -393,8 +502,13 @@ struct TimerSequenceDetailView: View {
             withAnimation {
                 repeatSequence.toggle()
                 sequence.repeatSequence = repeatSequence
+                if !repeatSequence {
+                    sequence.recurrenceRule = nil
+                }
                 save()
             }
+        case .schedule:
+            isScheduleSequencePresented = true
         }
     }
     
@@ -420,6 +534,114 @@ struct TimerSequenceDetailView: View {
         }
         isEditingName = false
         nameFieldFocus = false
+    }
+    
+    /// Creates a weekday selection button
+    private func weekdayButton(_ day: Int, letter: String) -> some View {
+        let isSelected = selectedDays.contains(day)
+        
+        return Button {
+            if selectedDays.contains(day) {
+                selectedDays.remove(day)
+            } else {
+                selectedDays.insert(day)
+            }
+        } label: {
+            Text(letter)
+                .font(.subheadline)
+                .fontWeight(.medium)
+                .frame(width: 36, height: 36)
+                .background(
+                    Circle()
+                        .fill(isSelected ? AppTheme.Colors.accentSecondary : AppTheme.Colors.buttonBackground)
+                )
+                .foregroundColor(isSelected ? .white : AppTheme.Colors.text)
+        }
+    }
+    
+    /// Saves the recurrence settings
+    private func saveRecurrenceSettings() {
+        if repeatSequence {
+            // Create or update recurrence rule
+            let rule: RecurrenceRule
+            
+            if let existingRule = sequence.recurrenceRule {
+                rule = existingRule
+            } else {
+                rule = RecurrenceRule(frequency: .weekly)
+                sequence.recurrenceRule = rule
+            }
+            
+            // Update the rule properties
+            rule.frequency = .weekly
+            rule.interval = 1
+            
+            // Set the weekdays
+            rule.weekdays = Array(selectedDays)
+            
+            // Set the time component
+            let calendar = Calendar.current
+            var components = calendar.dateComponents([.hour, .minute], from: scheduledTime)
+            
+            // If no day is selected, default to today
+            if selectedDays.isEmpty {
+                let today = calendar.component(.weekday, from: Date()) - 1 // Convert 1-7 to 0-6
+                selectedDays = [today]
+                rule.weekdays = [today]
+            }
+            
+            // Create a start date with today's date but the selected time
+            let now = Date()
+            components.year = calendar.component(.year, from: now)
+            components.month = calendar.component(.month, from: now)
+            components.day = calendar.component(.day, from: now)
+            
+            if let date = calendar.date(from: components) {
+                rule.startDate = date
+            }
+            
+            sequence.repeatSequence = true
+        } else {
+            sequence.recurrenceRule = nil
+            sequence.repeatSequence = false
+        }
+        
+        save()
+    }
+    
+    /// Formats the recurrence information into a readable string
+    private func formatRecurrenceInfo(_ rule: RecurrenceRule) -> String {
+        let weekdayFormatter = DateFormatter()
+        weekdayFormatter.dateFormat = "EEE"
+        
+        var timeString = ""
+        if let startDate = rule.startDate {
+            let timeFormatter = DateFormatter()
+            timeFormatter.dateFormat = "h:mm a"
+            timeString = timeFormatter.string(from: startDate)
+        }
+        
+        if rule.frequency == .weekly, let weekdays = rule.weekdays, !weekdays.isEmpty {
+            let calendar = Calendar.current
+            var weekdayStrings: [String] = []
+            
+            for weekday in weekdays.sorted() {
+                // Convert from our 0-6 format to Calendar's 1-7 format
+                let calendarWeekday = weekday + 1
+                
+                // Create a date with the specified weekday
+                var components = DateComponents()
+                components.weekday = calendarWeekday
+                if let date = calendar.nextDate(after: Date(), matching: components, matchingPolicy: .nextTime) {
+                    weekdayStrings.append(weekdayFormatter.string(from: date))
+                }
+            }
+            
+            let daysString = weekdayStrings.joined(separator: ", ")
+            return "Every \(daysString) at \(timeString)"
+        } else {
+            return "Repeats at \(timeString)"
+        }
     }
 }
 
@@ -454,19 +676,6 @@ struct TimerRow: View {
                                 .font(.caption2)
                                 .foregroundColor(AppTheme.Colors.accentSecondary)
                         }
-                        
-                        if timer.isRecurring, let rule = timer.recurrenceRule {
-                            Label {
-                                let intervalText = rule.interval == 1 ? "" : "\(rule.interval) "
-                                Text("Every \(intervalText)\(rule.frequency.description)")
-                                    .font(AppTheme.Typography.caption)
-                                    .foregroundColor(AppTheme.Colors.textSecondary)
-                            } icon: {
-                                Image(systemName: "repeat")
-                                    .font(.caption2)
-                                    .foregroundColor(AppTheme.Colors.accentSecondary)
-                            }
-                        }
                     }
                 }
                 
@@ -495,6 +704,16 @@ struct TimerRow: View {
             timers: [workTimer, breakTimer],
             repeatSequence: true
         )
+        
+        // Add a recurrence rule
+        let recurrenceRule = RecurrenceRule(
+            frequency: .weekly,
+            interval: 1,
+            startDate: Calendar.current.date(bySettingHour: 9, minute: 0, second: 0, of: Date()),
+            weekdays: [1, 3, 5] // Monday, Wednesday, Friday
+        )
+        
+        sequence.recurrenceRule = recurrenceRule
         
         context.insert(sequence)
         

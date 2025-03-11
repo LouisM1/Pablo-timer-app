@@ -8,23 +8,6 @@ final class TimerModelTests: XCTestCase {
         let timer = TimerModel(title: "Work", duration: 1800)
         XCTAssertEqual(timer.title, "Work")
         XCTAssertEqual(timer.duration, 1800)
-        XCTAssertFalse(timer.isRecurring)
-        XCTAssertNil(timer.recurrenceRule)
-        
-        // Test initialization with recurrence
-        let rule = RecurrenceRule(frequency: .daily)
-        let recurringTimer = TimerModel(
-            title: "Daily Workout",
-            duration: 3600,
-            isRecurring: true,
-            recurrenceRule: rule
-        )
-        
-        XCTAssertEqual(recurringTimer.title, "Daily Workout")
-        XCTAssertEqual(recurringTimer.duration, 3600)
-        XCTAssertTrue(recurringTimer.isRecurring)
-        XCTAssertNotNil(recurringTimer.recurrenceRule)
-        XCTAssertEqual(recurringTimer.recurrenceRule?.frequency, .daily)
     }
     
     func testFormattedDuration() {
@@ -42,13 +25,10 @@ final class TimerModelTests: XCTestCase {
     }
     
     func testCopy() {
-        // Create a timer with recurrence rule
-        let rule = RecurrenceRule(frequency: .weekly, interval: 2)
+        // Create a timer
         let originalTimer = TimerModel(
             title: "Original",
-            duration: 1500,
-            isRecurring: true,
-            recurrenceRule: rule
+            duration: 1500
         )
         
         // Copy the timer
@@ -58,12 +38,6 @@ final class TimerModelTests: XCTestCase {
         XCTAssertNotEqual(originalTimer.id, copiedTimer.id)
         XCTAssertEqual(originalTimer.title, copiedTimer.title)
         XCTAssertEqual(originalTimer.duration, copiedTimer.duration)
-        XCTAssertEqual(originalTimer.isRecurring, copiedTimer.isRecurring)
-        
-        // Verify recurrence rule was copied correctly
-        XCTAssertNotNil(copiedTimer.recurrenceRule)
-        XCTAssertEqual(copiedTimer.recurrenceRule?.frequency, .weekly)
-        XCTAssertEqual(copiedTimer.recurrenceRule?.interval, 2)
         
         // Verify that modifying the copy doesn't affect the original
         copiedTimer.title = "Modified Copy"

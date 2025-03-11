@@ -265,6 +265,16 @@ struct TimerListView: View {
         repeatSequence: true
     )
     
+    // Add a recurrence rule to the sequence
+    let recurrenceRule = RecurrenceRule(
+        frequency: .weekly,
+        interval: 1,
+        startDate: Calendar.current.date(bySettingHour: 9, minute: 0, second: 0, of: Date()),
+        weekdays: [1, 3, 5] // Monday, Wednesday, Friday
+    )
+    
+    sequence.recurrenceRule = recurrenceRule
+    
     context.insert(sequence)
     
     return TimerListView(modelContext: context)

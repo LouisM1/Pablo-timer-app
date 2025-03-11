@@ -24,15 +24,6 @@ struct TimerDetailView: View {
     /// State for the timer duration in seconds
     @State private var durationSeconds: Int
     
-    /// State for whether the timer is recurring
-    @State private var isRecurring: Bool
-    
-    /// State for the recurrence frequency
-    @State private var recurrenceFrequency: RecurrenceFrequency
-    
-    /// State for the recurrence interval
-    @State private var recurrenceInterval: Int
-    
     /// Whether changes have been made
     @State private var hasChanges: Bool = false
     
@@ -58,16 +49,6 @@ struct TimerDetailView: View {
         self._title = State(initialValue: timer.title)
         self._durationMinutes = State(initialValue: timer.duration / 60)
         self._durationSeconds = State(initialValue: timer.duration % 60)
-        self._isRecurring = State(initialValue: timer.isRecurring)
-        
-        // Initialize recurrence properties
-        if let rule = timer.recurrenceRule {
-            self._recurrenceFrequency = State(initialValue: rule.frequency)
-            self._recurrenceInterval = State(initialValue: rule.interval)
-        } else {
-            self._recurrenceFrequency = State(initialValue: .daily)
-            self._recurrenceInterval = State(initialValue: 1)
-        }
     }
     
     var body: some View {
@@ -177,38 +158,6 @@ struct TimerDetailView: View {
                 Text("Timer Details")
             }
             
-            // Recurrence settings
-            Section {
-                Toggle("Recurring Timer", isOn: $isRecurring)
-                    .onChange(of: isRecurring) { _, _ in hasChanges = true }
-                
-                if isRecurring {
-                    HStack {
-                        Text("Repeat every")
-                        
-                        Picker("Interval", selection: $recurrenceInterval) {
-                            ForEach(1..<31) { interval in
-                                Text("\(interval)").tag(interval)
-                            }
-                        }
-                        .pickerStyle(.wheel)
-                        .frame(width: 60)
-                        .clipped()
-                        .onChange(of: recurrenceInterval) { _, _ in hasChanges = true }
-                        
-                        Picker("Frequency", selection: $recurrenceFrequency) {
-                            ForEach(RecurrenceFrequency.allCases, id: \.self) { frequency in
-                                Text(frequency.description).tag(frequency)
-                            }
-                        }
-                        .pickerStyle(.menu)
-                        .onChange(of: recurrenceFrequency) { _, _ in hasChanges = true }
-                    }
-                }
-            } header: {
-                Text("Recurrence")
-            }
-            
             // Preview section
             Section {
                 VStack(alignment: .center, spacing: 8) {
@@ -229,20 +178,10 @@ struct TimerDetailView: View {
     
     /// A preview timer with the current values
     private var previewTimer: TimerModel {
-        let previewTimer = TimerModel(
+        TimerModel(
             title: title,
-            duration: durationMinutes * 60 + durationSeconds,
-            isRecurring: isRecurring
+            duration: durationMinutes * 60 + durationSeconds
         )
-        
-        if isRecurring {
-            previewTimer.recurrenceRule = RecurrenceRule(
-                frequency: recurrenceFrequency,
-                interval: recurrenceInterval
-            )
-        }
-        
-        return previewTimer
     }
     
     /// Save changes to the timer
@@ -250,22 +189,6 @@ struct TimerDetailView: View {
         // Update timer properties
         timer.title = title
         timer.duration = durationMinutes * 60 + durationSeconds
-        timer.isRecurring = isRecurring
-        
-        // Update or create recurrence rule
-        if isRecurring {
-            if let rule = timer.recurrenceRule {
-                rule.frequency = recurrenceFrequency
-                rule.interval = recurrenceInterval
-            } else {
-                timer.recurrenceRule = RecurrenceRule(
-                    frequency: recurrenceFrequency,
-                    interval: recurrenceInterval
-                )
-            }
-        } else {
-            timer.recurrenceRule = nil
-        }
         
         // If a parent sequence is provided and the timer isn't already in a sequence,
         // associate it with the parent sequence at the end of the list
@@ -308,15 +231,14 @@ private struct TimerPreviewChip: View {
     }
 }
 
+struct TimerDetailPreview: View {
+    var body: some View {
+        let container = try! ModelContainer(for: TimerModel.self, TimerSequenceModel.self, RecurrenceRule.self)
+        let timer = TimerModel(title: "Work", duration: 25 * 60)
+        TimerDetailView(timer: timer, modelContext: ModelContext(container), isPresentedInSheet: true)
+    }
+}
+
 #Preview {
-    let config = ModelConfiguration(isStoredInMemoryOnly: true)
-    let container = try! ModelContainer(for: TimerModel.self, RecurrenceRule.self, configurations: config)
-    
-    let context = container.mainContext
-    let timer = TimerModel(title: "Work", duration: 25 * 60, isRecurring: true)
-    timer.recurrenceRule = RecurrenceRule(frequency: .daily, interval: 1)
-    
-    context.insert(timer)
-    
-    return TimerDetailView(timer: timer, modelContext: context)
+    TimerDetailPreview()
 } 

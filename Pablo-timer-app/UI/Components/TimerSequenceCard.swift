@@ -423,7 +423,6 @@ struct RoundedCorner: Shape {
 // Helper function to create a timer for previews
 private func createPreviewTimer() -> TimerModel {
     let timer = TimerModel(title: "Work", duration: 1500)
-    timer.recurrenceRule = RecurrenceRule(frequency: .daily, interval: 1)
     return timer
 }
 
@@ -431,7 +430,7 @@ private func createPreviewTimer() -> TimerModel {
 extension ModelContainer {
     static var sample: ModelContainer {
         do {
-            let container = try ModelContainer(for: TimerModel.self, RecurrenceRule.self, TimerSequenceModel.self)
+            let container = try ModelContainer(for: TimerModel.self, TimerSequenceModel.self, RecurrenceRule.self)
             return container
         } catch {
             fatalError("Failed to create sample ModelContainer: \(error)")
