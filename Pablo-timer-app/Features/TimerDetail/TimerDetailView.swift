@@ -9,6 +9,9 @@ struct TimerDetailView: View {
     /// The model context for saving changes
     let modelContext: ModelContext
     
+    /// The parent sequence this timer belongs to (if any)
+    var parentSequence: TimerSequenceModel?
+    
     /// Whether the view is being presented
     @Environment(\.dismiss) private var dismiss
     
@@ -43,10 +46,12 @@ struct TimerDetailView: View {
     /// - Parameters:
     ///   - timer: The timer to display and edit
     ///   - modelContext: The SwiftData model context
+    ///   - parentSequence: The parent sequence this timer belongs to
     ///   - isPresentedInSheet: Whether this view is presented in a sheet
-    init(timer: TimerModel, modelContext: ModelContext, isPresentedInSheet: Bool = false) {
+    init(timer: TimerModel, modelContext: ModelContext, parentSequence: TimerSequenceModel? = nil, isPresentedInSheet: Bool = false) {
         self.timer = timer
         self.modelContext = modelContext
+        self.parentSequence = parentSequence
         self.isPresentedInSheet = isPresentedInSheet
         
         // Initialize state variables with timer values
@@ -260,6 +265,12 @@ struct TimerDetailView: View {
             }
         } else {
             timer.recurrenceRule = nil
+        }
+        
+        // If a parent sequence is provided and the timer isn't already in a sequence,
+        // associate it with the parent sequence
+        if let parentSequence = parentSequence, timer.sequence == nil {
+            parentSequence.addTimer(timer)
         }
         
         // Save changes to the database

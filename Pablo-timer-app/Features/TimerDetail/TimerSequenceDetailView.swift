@@ -262,7 +262,8 @@ struct TimerSequenceDetailView: View {
             NavigationStack {
                 TimerDetailView(
                     timer: createNewTimer(), 
-                    modelContext: modelContext, 
+                    modelContext: modelContext,
+                    parentSequence: sequence,
                     isPresentedInSheet: true
                 )
                 .navigationTitle("New Timer")
@@ -326,19 +327,25 @@ struct TimerSequenceDetailView: View {
     
     /// Saves the new timer to the sequence
     private func saveNewTimer() {
-        // Find the timer that isn't in the sequence yet
+        // The timer should already be associated with the sequence via the parentSequence parameter
+        // but we can update the UI here or perform any additional operations if needed
+        try? modelContext.save()
+        
+        // Make sure all timers are actually in the sequence
+        // This is a safety check in case anything went wrong
         do {
             let descriptor = FetchDescriptor<TimerModel>(predicate: #Predicate { timer in
                 timer.sequence == nil
             })
             let newTimers = try modelContext.fetch(descriptor)
             
-            // Add new timer to the sequence
-            for timer in newTimers {
-                sequence.addTimer(timer)
+            // Add any unassociated timers to the sequence
+            if !newTimers.isEmpty {
+                for timer in newTimers {
+                    sequence.addTimer(timer)
+                }
+                save()
             }
-            
-            save()
         } catch {
             print("Error fetching new timer: \(error)")
             HapticManager.shared.errorFeedback()
@@ -421,7 +428,12 @@ struct TimerRow: View {
     let modelContext: ModelContext
     
     var body: some View {
-        NavigationLink(destination: TimerDetailView(timer: timer, modelContext: modelContext, isPresentedInSheet: false)) {
+        NavigationLink(destination: TimerDetailView(
+            timer: timer, 
+            modelContext: modelContext, 
+            parentSequence: timer.sequence,
+            isPresentedInSheet: false
+        )) {
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(timer.title)
