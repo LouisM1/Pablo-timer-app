@@ -30,6 +30,12 @@ struct TimerSequenceDetailView: View {
     /// Whether the edit mode is active
     @State private var isEditMode: EditMode = .inactive
     
+    /// Whether the name is currently being edited
+    @State private var isEditingName = false
+    
+    /// Focus state for the name text field
+    @FocusState private var nameFieldFocus: Bool
+    
     /// List of actions available in the menu
     @State private var menuActions: [TimerAction] = [.play, .add, .repeat]
     
@@ -85,25 +91,43 @@ struct TimerSequenceDetailView: View {
             // Background color
             AppTheme.Colors.background
                 .ignoresSafeArea()
+                .onTapGesture {
+                    if isEditingName {
+                        saveNameChange()
+                    }
+                }
             
             VStack(spacing: 0) {
                 // Header with sequence name and edit button
                 VStack(spacing: 10) {
-                    if isEditMode == .inactive {
+                    if isEditMode == .inactive && !isEditingName {
                         Text(sequence.name)
                             .font(AppTheme.Typography.title)
                             .foregroundColor(AppTheme.Colors.text)
                             .padding(.top)
+                            .onTapGesture {
+                                editingName = sequence.name
+                                isEditingName = true
+                                nameFieldFocus = true
+                            }
                     } else {
-                        TextField("Sequence Name", text: $editingName)
-                            .font(AppTheme.Typography.title)
-                            .foregroundColor(AppTheme.Colors.text)
-                            .padding(.horizontal)
-                            .padding(.top)
+                        TextField("Sequence Name", text: $editingName, onCommit: {
+                            saveNameChange()
+                        })
+                        .font(AppTheme.Typography.title)
+                        .foregroundColor(AppTheme.Colors.text)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal)
+                        .padding(.top)
+                        .focused($nameFieldFocus)
+                        .submitLabel(.done)
+                        .onSubmit {
+                            saveNameChange()
+                        }
                     }
                     
                     // Display total duration
-                    Text("Total Duration: \(sequence.formattedTotalDuration)")
+                    Text("Duration: \(sequence.formattedTotalDuration)")
                         .font(AppTheme.Typography.body)
                         .foregroundColor(AppTheme.Colors.textSecondary)
                     
@@ -295,6 +319,13 @@ struct TimerSequenceDetailView: View {
                     sequence.name = editingName
                     save()
                 }
+                isEditingName = false
+            }
+        }
+        .onChange(of: nameFieldFocus) { isFocused in
+            // If focus is lost, save the name
+            if !isFocused && isEditingName {
+                saveNameChange()
             }
         }
     }
@@ -379,6 +410,19 @@ struct TimerSequenceDetailView: View {
             HapticManager.shared.errorFeedback()
             print("Error saving changes: \(error)")
         }
+    }
+    
+    /// Saves the name change to the sequence
+    private func saveNameChange() {
+        if !editingName.isEmpty {
+            sequence.name = editingName
+            save()
+        } else {
+            // If name is empty, revert to original name
+            editingName = sequence.name
+        }
+        isEditingName = false
+        nameFieldFocus = false
     }
 }
 
