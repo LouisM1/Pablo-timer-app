@@ -37,7 +37,7 @@ struct TimerSequenceDetailView: View {
     @FocusState private var nameFieldFocus: Bool
     
     /// List of actions available in the menu
-    @State private var menuActions: [TimerAction] = [.play, .add, .repeat]
+    @State private var menuActions: [TimerAction] = [.play, .add]
     
     /// Custom actions for timer sequences
     enum TimerAction: Identifiable {
@@ -58,7 +58,7 @@ struct TimerSequenceDetailView: View {
         
         var title: String {
             switch self {
-            case .play: return "Play Sequence"
+            case .play: return "Start Sequence"
             case .add: return "Add Timer"
             case .delete: return "Delete Sequence"
             case .duplicate: return "Duplicate Sequence"
@@ -240,19 +240,6 @@ struct TimerSequenceDetailView: View {
                         Label(
                             isEditMode == .active ? "Done Reordering" : "Reorder Timers", 
                             systemImage: isEditMode == .active ? "checkmark" : "arrow.up.arrow.down"
-                        )
-                    }
-                    
-                    Button {
-                        withAnimation {
-                            repeatSequence.toggle()
-                            sequence.repeatSequence = repeatSequence
-                            save()
-                        }
-                    } label: {
-                        Label(
-                            sequence.repeatSequence ? "Disable Repeat" : "Enable Repeat", 
-                            systemImage: "repeat"
                         )
                     }
                     
