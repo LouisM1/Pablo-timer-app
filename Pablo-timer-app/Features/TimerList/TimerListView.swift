@@ -40,7 +40,7 @@ struct TimerListView: View {
                 VStack {
                     // Header with app title and create button
                     HStack {
-                        Text("Timer Sequences")
+                        Text("Your Sequences")
                             .font(AppTheme.Typography.title)
                             .foregroundColor(AppTheme.Colors.text)
                         
@@ -90,6 +90,7 @@ struct TimerListView: View {
                             ForEach(viewModel.timerSequences) { sequence in
                                 TimerSequenceCard(
                                     sequence: sequence,
+                                    modelContext: viewModel.modelContext,
                                     onTap: {
                                         // Only navigate when not in edit mode
                                         if isEditMode == .inactive {
@@ -101,12 +102,36 @@ struct TimerListView: View {
                                         // Show confirmation dialog
                                         timerToDelete = sequence
                                         isShowingDeleteConfirmation = true
-                                    }
+                                    },
+                                    onPlay: {
+                                        // Toggle play/pause for this sequence
+                                        if viewModel.isSequenceRunning(sequence) {
+                                            viewModel.pauseSequence()
+                                        } else {
+                                            viewModel.startSequence(sequence)
+                                        }
+                                    },
+                                    isRunning: viewModel.isSequenceRunning(sequence),
+                                    progress: viewModel.progressForSequence(sequence)
                                 )
                                 .listRowSeparator(.hidden)
                                 .listRowBackground(Color.clear)
                                 .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
                                 .contextMenu {
+                                    Button {
+                                        // Toggle play/pause
+                                        if viewModel.isSequenceRunning(sequence) {
+                                            viewModel.pauseSequence()
+                                        } else {
+                                            viewModel.startSequence(sequence)
+                                        }
+                                    } label: {
+                                        Label(
+                                            viewModel.isSequenceRunning(sequence) ? "Pause" : "Play",
+                                            systemImage: viewModel.isSequenceRunning(sequence) ? "pause.fill" : "play.fill"
+                                        )
+                                    }
+                                    
                                     Button(role: .destructive) {
                                         timerToDelete = sequence
                                         isShowingDeleteConfirmation = true

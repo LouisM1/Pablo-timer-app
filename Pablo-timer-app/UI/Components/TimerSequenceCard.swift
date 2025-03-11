@@ -1,7 +1,6 @@
 import SwiftUI
 import Foundation
-
-// Import the HapticManager utility
+import SwiftData
 import UIKit
 
 /// A card component that displays a timer sequence
@@ -9,11 +8,23 @@ struct TimerSequenceCard: View {
     /// The timer sequence to display
     let sequence: TimerSequenceModel
     
+    /// The model context for saving changes
+    let modelContext: ModelContext
+    
     /// Action to perform when the card is tapped
     var onTap: () -> Void
     
     /// Action to perform when the delete button is tapped
     var onDelete: (() -> Void)?
+    
+    /// Action to perform when the play button is tapped
+    var onPlay: (() -> Void)?
+    
+    /// Whether the sequence is currently running
+    var isRunning: Bool = false
+    
+    /// Current progress of the sequence (0.0 to 1.0)
+    var progress: Double = 0.0
     
     /// Offset for the swipe gesture
     @State private var offset: CGFloat = 0
@@ -80,7 +91,7 @@ struct TimerSequenceCard: View {
             // Card content - this moves with the swipe
             Button(action: onTap) {
                 VStack(alignment: .leading, spacing: AppTheme.Layout.paddingSmall) {
-                    // Title and duration
+                    // Title row with play button and total time
                     HStack {
                         if isInEditMode {
                             Image(systemName: "line.3.horizontal")
@@ -94,22 +105,48 @@ struct TimerSequenceCard: View {
                         
                         Spacer()
                         
+                        // Only show play button when not in edit mode
+                        if !isInEditMode {
+                            Button(action: {
+                                HapticManager.shared.mediumImpactFeedback()
+                                onPlay?()
+                            }) {
+                                Image(systemName: isRunning ? "pause.fill" : "play.fill")
+                                    .font(.title3)
+                                    .foregroundColor(AppTheme.Colors.accentSecondary)
+                                    .frame(width: 44, height: 44)
+                                    .background(
+                                        Circle()
+                                            .fill(AppTheme.Colors.accentSecondary.opacity(0.1))
+                                    )
+                            }
+                            .buttonStyle(PlainButtonStyle())
+                            .padding(.trailing, 8)
+                        }
+                        
                         Text(sequence.formattedTotalDuration)
                             .font(AppTheme.Typography.body)
                             .foregroundColor(AppTheme.Colors.textSecondary)
                     }
                     
-                    // Timer count
+                    // Timer count and info
                     Text("\(sequence.timers.count) timer\(sequence.timers.count == 1 ? "" : "s")")
                         .font(AppTheme.Typography.caption)
                         .foregroundColor(AppTheme.Colors.textSecondary)
+                    
+                    // Progress bar (only visible when sequence is running)
+                    if isRunning {
+                        ProgressBarView(progress: progress)
+                            .frame(height: 8)
+                            .padding(.vertical, 4)
+                    }
                     
                     // Timer preview
                     if !sequence.timers.isEmpty {
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: AppTheme.Layout.paddingSmall) {
                                 ForEach(sequence.timers) { timer in
-                                    TimerChip(timer: timer)
+                                    TimerChip(timer: timer, modelContext: modelContext)
                                 }
                             }
                         }
@@ -246,13 +283,28 @@ struct TimerSequenceCard: View {
             // Return a provider with the sequence ID
             return NSItemProvider(object: sequence.id.uuidString as NSString)
         }
-        .onDrop(of: [.text], isTargeted: $isDragging) { providers, location in
-            // Reset dragging state
-            isDragging = false
-            HapticManager.shared.selectionFeedback()
-            
-            // We don't handle the drop here, it's handled by the List's onMove
-            return false
+    }
+}
+
+/// A custom progress bar view
+struct ProgressBarView: View {
+    /// Progress value (0.0 to 1.0)
+    let progress: Double
+    
+    var body: some View {
+        GeometryReader { geometry in
+            ZStack(alignment: .leading) {
+                // Background track
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(AppTheme.Colors.buttonBorder)
+                    .frame(width: geometry.size.width, height: geometry.size.height)
+                
+                // Progress fill
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(AppTheme.Colors.accentSecondary)
+                    .frame(width: geometry.size.width * CGFloat(progress), height: geometry.size.height)
+                    .animation(.linear(duration: 0.2), value: progress)
+            }
         }
     }
 }
@@ -262,21 +314,39 @@ struct TimerChip: View {
     /// The timer to display
     let timer: TimerModel
     
+    /// The model context for saving changes
+    let modelContext: ModelContext
+    
+    /// Whether the timer detail sheet is presented
+    @State private var isTimerDetailPresented = false
+    
     var body: some View {
-        VStack(spacing: 2) {
-            Text(timer.title)
-                .font(.caption2)
-                .fontWeight(.medium)
-                .foregroundColor(AppTheme.Colors.text)
-            
-            Text(timer.formattedDuration)
-                .font(.caption2)
-                .foregroundColor(AppTheme.Colors.textSecondary)
+        Button {
+            isTimerDetailPresented = true
+        } label: {
+            VStack(spacing: 2) {
+                Text(timer.title)
+                    .font(.caption2)
+                    .fontWeight(.medium)
+                    .foregroundColor(AppTheme.Colors.text)
+                
+                Text(timer.formattedDuration)
+                    .font(.caption2)
+                    .foregroundColor(AppTheme.Colors.textSecondary)
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(AppTheme.Colors.accent.opacity(0.2))
+            .cornerRadius(AppTheme.Layout.buttonCornerRadius)
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 4)
-        .background(AppTheme.Colors.accent.opacity(0.2))
-        .cornerRadius(AppTheme.Layout.buttonCornerRadius)
+        .buttonStyle(PlainButtonStyle())
+        .sheet(isPresented: $isTimerDetailPresented) {
+            // Create the TimerDetailView directly
+            TimerDetailView(
+                timer: timer,
+                modelContext: modelContext
+            )
+        }
     }
 }
 
@@ -314,6 +384,7 @@ struct RoundedCorner: Shape {
                 ],
                 repeatSequence: true
             ),
+            modelContext: ModelContext(ModelContainer.sample),
             onTap: {},
             onDelete: {}
         )
@@ -328,10 +399,38 @@ struct RoundedCorner: Shape {
                     TimerModel(title: "Cooldown", duration: 5 * 60)
                 ]
             ),
+            modelContext: ModelContext(ModelContainer.sample),
             onTap: {},
             onDelete: {}
         )
         .padding()
     }
     .background(Color.gray.opacity(0.1))
+}
+
+// Preview for TimerChip
+#Preview("TimerChip") {
+    let timer = createPreviewTimer()
+    
+    TimerChip(timer: timer, modelContext: ModelContext(ModelContainer.sample))
+        .padding()
+}
+
+// Helper function to create a timer for previews
+private func createPreviewTimer() -> TimerModel {
+    let timer = TimerModel(title: "Work", duration: 1500)
+    timer.recurrenceRule = RecurrenceRule(frequency: .daily, interval: 1)
+    return timer
+}
+
+// Extension to provide a sample ModelContainer for previews
+extension ModelContainer {
+    static var sample: ModelContainer {
+        do {
+            let container = try ModelContainer(for: TimerModel.self, RecurrenceRule.self, TimerSequenceModel.self)
+            return container
+        } catch {
+            fatalError("Failed to create sample ModelContainer: \(error)")
+        }
+    }
 } 

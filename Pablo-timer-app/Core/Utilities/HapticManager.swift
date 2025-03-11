@@ -2,51 +2,51 @@ import Foundation
 import UIKit
 
 /// Utility class for managing haptic feedback throughout the app
-class HapticManager {
+public class HapticManager {
     /// Shared instance for singleton access
-    static let shared = HapticManager()
+    public static let shared = HapticManager()
     
     /// Private initializer for singleton pattern
     private init() {}
     
     /// Triggers a success haptic feedback
-    func successFeedback() {
+    public func successFeedback() {
         let generator = UINotificationFeedbackGenerator()
         generator.notificationOccurred(.success)
     }
     
     /// Triggers an error haptic feedback
-    func errorFeedback() {
+    public func errorFeedback() {
         let generator = UINotificationFeedbackGenerator()
         generator.notificationOccurred(.error)
     }
     
     /// Triggers a warning haptic feedback
-    func warningFeedback() {
+    public func warningFeedback() {
         let generator = UINotificationFeedbackGenerator()
         generator.notificationOccurred(.warning)
     }
     
     /// Triggers a light impact haptic feedback
-    func lightImpactFeedback() {
+    public func lightImpactFeedback() {
         let generator = UIImpactFeedbackGenerator(style: .light)
         generator.impactOccurred()
     }
     
     /// Triggers a medium impact haptic feedback
-    func mediumImpactFeedback() {
+    public func mediumImpactFeedback() {
         let generator = UIImpactFeedbackGenerator(style: .medium)
         generator.impactOccurred()
     }
     
     /// Triggers a heavy impact haptic feedback
-    func heavyImpactFeedback() {
+    public func heavyImpactFeedback() {
         let generator = UIImpactFeedbackGenerator(style: .heavy)
         generator.impactOccurred()
     }
     
     /// Triggers a selection haptic feedback
-    func selectionFeedback() {
+    public func selectionFeedback() {
         let generator = UISelectionFeedbackGenerator()
         generator.selectionChanged()
     }

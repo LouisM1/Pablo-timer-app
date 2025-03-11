@@ -2,11 +2,25 @@ import Foundation
 import SwiftData
 
 /// Defines the frequency at which a timer or sequence recurs
-enum RecurrenceFrequency: String, Codable, Hashable {
+enum RecurrenceFrequency: String, Codable, Hashable, CaseIterable {
     case daily
     case weekly
     case monthly
     case custom
+    
+    /// A human-readable description of the frequency
+    var description: String {
+        switch self {
+        case .daily:
+            return "Day(s)"
+        case .weekly:
+            return "Week(s)"
+        case .monthly:
+            return "Month(s)"
+        case .custom:
+            return "Custom"
+        }
+    }
 }
 
 /// Defines the recurrence pattern for timers or sequences
