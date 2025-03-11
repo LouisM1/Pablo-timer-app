@@ -36,13 +36,13 @@ final class MigrationManager {
         // If this is a first install or we're on the current version, no migration needed
         if storedVersion == 0 || storedVersion == currentSchemaVersion {
             updateStoredSchemaVersion(to: currentSchemaVersion)
-            logger.debug("No migration needed. Current schema version: \(currentSchemaVersion)")
+            logger.debug("No migration needed. Current schema version: \(self.currentSchemaVersion)")
             return
         }
         
         // If the stored version is higher than current, something is wrong
         if storedVersion > currentSchemaVersion {
-            logger.error("Stored schema version (\(storedVersion)) is higher than current (\(currentSchemaVersion)). This should not happen.")
+            logger.error("Stored schema version (\(storedVersion)) is higher than current (\(self.currentSchemaVersion)). This should not happen.")
             return
         }
         
@@ -53,7 +53,7 @@ final class MigrationManager {
         
         // Update the stored version
         updateStoredSchemaVersion(to: currentSchemaVersion)
-        logger.debug("Migration completed. Schema updated to version \(currentSchemaVersion)")
+        logger.debug("Migration completed. Schema updated to version \(self.currentSchemaVersion)")
     }
     
     /// Performs a migration from one version to the next

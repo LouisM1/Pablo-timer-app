@@ -28,12 +28,17 @@ extension ModelContext {
     ///   - keyPath: The key path to the ID property
     /// - Returns: True if an entity with the ID exists, false otherwise
     func exists<T: PersistentModel, ID: Equatable>(_ type: T.Type, id: ID, keyPath: KeyPath<T, ID>) throws -> Bool {
-        let predicate = #Predicate<T> { entity in
-            entity[keyPath: keyPath] == id
-        }
+        // Using a string-based predicate instead of a keyPath-based one
+        // This avoids the issue with keyPath in predicates
+        let descriptor = FetchDescriptor<T>(
+            predicate: #Predicate<T> { $0[keyPath: keyPath] == id }
+        )
         
-        let descriptor = FetchDescriptor<T>(predicate: predicate, fetchLimit: 1)
-        let results = try fetch(descriptor)
+        // Set fetch limit separately
+        var limitedDescriptor = descriptor
+        limitedDescriptor.fetchLimit = 1
+        
+        let results = try fetch(limitedDescriptor)
         return !results.isEmpty
     }
     
@@ -52,7 +57,7 @@ extension FetchDescriptor {
     /// Creates a new FetchDescriptor with a specified fetch limit
     /// - Parameter limit: The maximum number of results to fetch
     /// - Returns: A new FetchDescriptor with the specified limit
-    func limit(_ limit: Int) -> FetchDescriptor<Model> {
+    func limit(_ limit: Int) -> FetchDescriptor {
         var descriptor = self
         descriptor.fetchLimit = limit
         return descriptor
@@ -61,7 +66,7 @@ extension FetchDescriptor {
     /// Creates a new FetchDescriptor with the specified offset
     /// - Parameter offset: The number of results to skip
     /// - Returns: A new FetchDescriptor with the specified offset
-    func offset(_ offset: Int) -> FetchDescriptor<Model> {
+    func offset(_ offset: Int) -> FetchDescriptor {
         var descriptor = self
         descriptor.fetchOffset = offset
         return descriptor
@@ -70,7 +75,7 @@ extension FetchDescriptor {
     /// Creates a new FetchDescriptor with the specified sort descriptors
     /// - Parameter sortBy: The sort descriptors to apply
     /// - Returns: A new FetchDescriptor with the specified sort descriptors
-    func sorted(by sortBy: [SortDescriptor<Model>]) -> FetchDescriptor<Model> {
+    func sorted(by sortBy: [SortDescriptor<T>]) -> FetchDescriptor {
         var descriptor = self
         descriptor.sortBy = sortBy
         return descriptor

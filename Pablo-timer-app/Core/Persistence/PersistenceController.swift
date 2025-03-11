@@ -1,10 +1,10 @@
 import Foundation
 import SwiftData
 import OSLog
+import Combine
 
 /// Manages SwiftData persistence operations for the app
-@Observable
-final class PersistenceController {
+final class PersistenceController: ObservableObject {
     private let logger = Logger(subsystem: "com.pablo.timer-app", category: "Persistence")
     
     /// The shared instance for app-wide use
@@ -14,7 +14,7 @@ final class PersistenceController {
     let modelContainer: ModelContainer
     
     /// The main context for SwiftData operations
-    var modelContext: ModelContext
+    @Published var modelContext: ModelContext
     
     /// Initialize with a specific schema and configurations
     /// - Parameter inMemory: Whether to use an in-memory store (useful for testing)
@@ -32,7 +32,7 @@ final class PersistenceController {
             )
             
             modelContainer = try ModelContainer(for: schema, configurations: [modelConfiguration])
-            modelContext = ModelContainer.shared.mainContext
+            modelContext = modelContainer.mainContext
             
             // Check for and perform migrations if needed (skip for in-memory stores)
             if !inMemory {
