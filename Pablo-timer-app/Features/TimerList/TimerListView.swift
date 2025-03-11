@@ -18,6 +18,9 @@ struct TimerListView: View {
     /// Whether the delete confirmation dialog is presented
     @State private var isShowingDeleteConfirmation = false
     
+    /// Whether the list is in edit mode (for reordering)
+    @State private var isEditMode: EditMode = .inactive
+    
     /// Initializes the view with a model context
     /// - Parameter modelContext: The SwiftData model context
     init(modelContext: ModelContext) {
@@ -54,6 +57,23 @@ struct TimerListView: View {
                     .padding(.horizontal)
                     .padding(.top)
                     
+                    // Edit mode indicator
+                    if isEditMode == .active {
+                        HStack {
+                            Image(systemName: "arrow.up.arrow.down")
+                                .foregroundColor(AppTheme.Colors.accentSecondary)
+                            
+                            Text("Drag to reorder timer sequences")
+                                .font(AppTheme.Typography.caption)
+                                .foregroundColor(AppTheme.Colors.accentSecondary)
+                            
+                            Spacer()
+                        }
+                        .padding(.horizontal)
+                        .padding(.top, 4)
+                        .transition(.opacity)
+                    }
+                    
                     // Timer sequence list or empty state
                     if viewModel.isLoading {
                         ProgressView()
@@ -66,33 +86,44 @@ struct TimerListView: View {
                         })
                         .padding(.top, 50)
                     } else {
-                        ScrollView {
-                            LazyVStack(spacing: AppTheme.Layout.padding) {
-                                ForEach(viewModel.timerSequences) { sequence in
-                                    TimerSequenceCard(
-                                        sequence: sequence,
-                                        onTap: {
+                        List {
+                            ForEach(viewModel.timerSequences) { sequence in
+                                TimerSequenceCard(
+                                    sequence: sequence,
+                                    onTap: {
+                                        // Only navigate when not in edit mode
+                                        if isEditMode == .inactive {
                                             // Navigate to timer detail/start view
                                             print("Tapped on sequence: \(sequence.name)")
-                                        },
-                                        onDelete: {
-                                            // Show confirmation dialog
-                                            timerToDelete = sequence
-                                            isShowingDeleteConfirmation = true
                                         }
-                                    )
-                                    .contextMenu {
-                                        Button(role: .destructive) {
-                                            timerToDelete = sequence
-                                            isShowingDeleteConfirmation = true
-                                        } label: {
-                                            Label("Delete", systemImage: "trash")
-                                        }
+                                    },
+                                    onDelete: {
+                                        // Show confirmation dialog
+                                        timerToDelete = sequence
+                                        isShowingDeleteConfirmation = true
+                                    }
+                                )
+                                .listRowSeparator(.hidden)
+                                .listRowBackground(Color.clear)
+                                .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
+                                .contextMenu {
+                                    Button(role: .destructive) {
+                                        timerToDelete = sequence
+                                        isShowingDeleteConfirmation = true
+                                    } label: {
+                                        Label("Delete", systemImage: "trash")
                                     }
                                 }
                             }
-                            .padding()
+                            .onMove { indices, destination in
+                                // Handle reordering
+                                guard let first = indices.first else { return }
+                                viewModel.moveTimerSequence(fromIndex: first, toIndex: destination > first ? destination - 1 : destination)
+                            }
                         }
+                        .listStyle(.plain)
+                        .environment(\.editMode, $isEditMode)
+                        .animation(.spring(), value: isEditMode)
                     }
                 }
             }
@@ -125,6 +156,19 @@ struct TimerListView: View {
                 }
             } message: {
                 Text("Are you sure you want to delete this timer sequence? This action cannot be undone.")
+            }
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    EditButton()
+                        .foregroundColor(AppTheme.Colors.accentSecondary)
+                }
+            }
+            .onChange(of: isEditMode) { newValue, oldValue in
+                if newValue != oldValue {
+                    if newValue == .active {
+                        HapticManager.shared.selectionFeedback()
+                    }
+                }
             }
         }
     }

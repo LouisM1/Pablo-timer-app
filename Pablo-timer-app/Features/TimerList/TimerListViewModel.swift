@@ -76,6 +76,39 @@ class TimerListViewModel {
         }
     }
     
+    /// Reorders timer sequences
+    /// - Parameters:
+    ///   - fromIndex: The current index of the sequence
+    ///   - toIndex: The new index for the sequence
+    func moveTimerSequence(fromIndex: Int, toIndex: Int) {
+        guard fromIndex != toIndex,
+              fromIndex >= 0, fromIndex < timerSequences.count,
+              toIndex >= 0, toIndex < timerSequences.count else {
+            return
+        }
+        
+        // Update the order in the local array
+        let movedSequence = timerSequences.remove(at: fromIndex)
+        timerSequences.insert(movedSequence, at: toIndex)
+        
+        // Update the timestamps to reflect the new order
+        let now = Date()
+        for (index, sequence) in timerSequences.enumerated() {
+            // Add a small time difference to maintain the order
+            sequence.updatedAt = now.addingTimeInterval(-Double(index))
+        }
+        
+        do {
+            try modelContext.save()
+            HapticManager.shared.selectionFeedback()
+        } catch {
+            errorMessage = "Failed to reorder timer sequences: \(error.localizedDescription)"
+            HapticManager.shared.errorFeedback()
+            // Revert to the original order by fetching again
+            fetchTimerSequences()
+        }
+    }
+    
     /// Creates a sample timer sequence for testing
     func createSampleTimerSequence() {
         let workTimer = TimerModel(title: "Work", duration: 25 * 60)

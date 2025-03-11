@@ -1,7 +1,8 @@
 import SwiftUI
+import Foundation
 
 // Import the HapticManager utility
-import Foundation
+import UIKit
 
 /// A card component that displays a timer sequence
 struct TimerSequenceCard: View {
@@ -20,6 +21,12 @@ struct TimerSequenceCard: View {
     /// Whether haptic feedback has been triggered for the current swipe
     @State private var hasTriggeredHaptic = false
     
+    /// Whether the card is being dragged for reordering
+    @State private var isDragging = false
+    
+    /// Access to the edit mode state
+    @Environment(\.editMode) private var editMode
+    
     /// Threshold for triggering delete action
     private let deleteThreshold: CGFloat = -200
     
@@ -37,6 +44,11 @@ struct TimerSequenceCard: View {
             return Color.red.opacity(percentage * 0.3)
         }
         return Color.clear
+    }
+    
+    /// Whether the view is in edit mode
+    private var isInEditMode: Bool {
+        return editMode?.wrappedValue.isEditing ?? false
     }
     
     var body: some View {
@@ -70,6 +82,12 @@ struct TimerSequenceCard: View {
                 VStack(alignment: .leading, spacing: AppTheme.Layout.paddingSmall) {
                     // Title and duration
                     HStack {
+                        if isInEditMode {
+                            Image(systemName: "line.3.horizontal")
+                                .foregroundColor(AppTheme.Colors.textSecondary)
+                                .padding(.trailing, 4)
+                        }
+                        
                         Text(sequence.name)
                             .font(AppTheme.Typography.subtitle)
                             .foregroundColor(AppTheme.Colors.text)
@@ -114,10 +132,14 @@ struct TimerSequenceCard: View {
                 .frame(maxWidth: .infinity)
                 .background(AppTheme.Colors.buttonBackground)
                 .cornerRadius(AppTheme.Layout.cornerRadius)
-                .shadow(color: Color.black.opacity(0.05), radius: 5, x: 0, y: 2)
+                .shadow(color: isDragging ? Color.black.opacity(0.15) : Color.black.opacity(0.05), 
+                        radius: isDragging ? 10 : 5, 
+                        x: 0, 
+                        y: isDragging ? 5 : 2)
                 .overlay(
                     RoundedRectangle(cornerRadius: AppTheme.Layout.cornerRadius)
-                        .stroke(AppTheme.Colors.buttonBorder, lineWidth: 1)
+                        .stroke(isDragging ? AppTheme.Colors.accentSecondary : AppTheme.Colors.buttonBorder, 
+                                lineWidth: isDragging ? 2 : 1)
                 )
                 .background(
                     // Visual indicator for delete action
@@ -139,63 +161,98 @@ struct TimerSequenceCard: View {
                         }
                     }
                 )
+                .scaleEffect(isDragging ? 1.02 : 1.0)
             }
             .buttonStyle(PlainButtonStyle())
             .offset(x: offset)
             .gesture(
                 DragGesture()
                     .onChanged { gesture in
-                        // Only allow left swipe (negative values)
-                        let newOffset = min(0, gesture.translation.width)
-                        offset = newOffset
-                        
-                        // Provide haptic feedback when crossing threshold
-                        if offset < hapticThreshold && !hasTriggeredHaptic {
-                            HapticManager.shared.lightImpactFeedback()
-                            hasTriggeredHaptic = true
-                        } else if offset > hapticThreshold && hasTriggeredHaptic {
-                            hasTriggeredHaptic = false
-                        }
-                        
-                        // Additional haptic feedback when approaching delete threshold
-                        if offset < deleteThreshold * 0.7 && offset > deleteThreshold * 0.8 {
-                            HapticManager.shared.selectionFeedback()
+                        // Only allow left swipe (negative values) when not in edit mode
+                        if !isInEditMode {
+                            let newOffset = min(0, gesture.translation.width)
+                            offset = newOffset
+                            
+                            // Provide haptic feedback when crossing threshold
+                            if offset < hapticThreshold && !hasTriggeredHaptic {
+                                HapticManager.shared.lightImpactFeedback()
+                                hasTriggeredHaptic = true
+                            } else if offset > hapticThreshold && hasTriggeredHaptic {
+                                hasTriggeredHaptic = false
+                            }
+                            
+                            // Additional haptic feedback when approaching delete threshold
+                            if offset < deleteThreshold * 0.7 && offset > deleteThreshold * 0.8 {
+                                HapticManager.shared.selectionFeedback()
+                            }
                         }
                     }
                     .onEnded { gesture in
-                        // If swiped past threshold, delete the timer
-                        if offset < deleteThreshold {
-                            withAnimation(.spring()) {
-                                HapticManager.shared.heavyImpactFeedback()
-                                // Delete immediately when swiped far enough
-                                onDelete?()
+                        // Only process swipe gestures when not in edit mode
+                        if !isInEditMode {
+                            // If swiped past threshold, delete the timer
+                            if offset < deleteThreshold {
+                                withAnimation(.spring()) {
+                                    HapticManager.shared.heavyImpactFeedback()
+                                    // Delete immediately when swiped far enough
+                                    onDelete?()
+                                }
+                            } else if offset < deleteButtonThreshold {
+                                // Show delete button
+                                withAnimation(.spring()) {
+                                    offset = deleteButtonThreshold
+                                    HapticManager.shared.selectionFeedback()
+                                }
+                            } else {
+                                // Reset position
+                                withAnimation(.spring()) {
+                                    offset = 0
+                                }
                             }
-                        } else if offset < deleteButtonThreshold {
-                            // Show delete button
-                            withAnimation(.spring()) {
-                                offset = deleteButtonThreshold
-                                HapticManager.shared.selectionFeedback()
-                            }
-                        } else {
-                            // Reset position
-                            withAnimation(.spring()) {
-                                offset = 0
-                            }
+                            
+                            // Reset haptic trigger state
+                            hasTriggeredHaptic = false
                         }
-                        
-                        // Reset haptic trigger state
-                        hasTriggeredHaptic = false
                     }
             )
             // Add a tap gesture to reset the card position when tapped outside the delete button
             .contentShape(Rectangle())
             .onTapGesture {
-                if offset < 0 {
+                if offset < 0 && !isInEditMode {
                     withAnimation(.spring()) {
                         offset = 0
                     }
                 }
             }
+        }
+        .onAppear {
+            // Reset offset when view appears
+            offset = 0
+        }
+        .onChange(of: isInEditMode) { newValue, oldValue in
+            // Reset offset when edit mode changes
+            if newValue != oldValue {
+                withAnimation(.spring()) {
+                    offset = 0
+                }
+            }
+        }
+        // Add drag state for visual feedback during reordering
+        .onDrag {
+            // Set dragging state to true
+            isDragging = true
+            HapticManager.shared.lightImpactFeedback()
+            
+            // Return a provider with the sequence ID
+            return NSItemProvider(object: sequence.id.uuidString as NSString)
+        }
+        .onDrop(of: [.text], isTargeted: $isDragging) { providers, location in
+            // Reset dragging state
+            isDragging = false
+            HapticManager.shared.selectionFeedback()
+            
+            // We don't handle the drop here, it's handled by the List's onMove
+            return false
         }
     }
 }
