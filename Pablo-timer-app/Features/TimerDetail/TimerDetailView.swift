@@ -268,9 +268,17 @@ struct TimerDetailView: View {
         }
         
         // If a parent sequence is provided and the timer isn't already in a sequence,
-        // associate it with the parent sequence
-        if let parentSequence = parentSequence, timer.sequence == nil {
-            parentSequence.addTimer(timer)
+        // associate it with the parent sequence at the end of the list
+        if let parentSequence = parentSequence {
+            // Only add the timer if it's not already in the sequence
+            if timer.sequence == nil {
+                // This will add the timer to the end of the list
+                parentSequence.addTimer(timer)
+            } else if timer.sequence?.id != parentSequence.id {
+                // If the timer exists but is in a different sequence, move it
+                timer.sequence?.removeTimer(timer)
+                parentSequence.addTimer(timer)
+            }
         }
         
         // Save changes to the database

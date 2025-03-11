@@ -328,11 +328,8 @@ struct TimerSequenceDetailView: View {
     /// Saves the new timer to the sequence
     private func saveNewTimer() {
         // The timer should already be associated with the sequence via the parentSequence parameter
-        // but we can update the UI here or perform any additional operations if needed
-        try? modelContext.save()
         
-        // Make sure all timers are actually in the sequence
-        // This is a safety check in case anything went wrong
+        // Make sure all timers are actually in the sequence and at the end of the list
         do {
             let descriptor = FetchDescriptor<TimerModel>(predicate: #Predicate { timer in
                 timer.sequence == nil
@@ -342,9 +339,16 @@ struct TimerSequenceDetailView: View {
             // Add any unassociated timers to the sequence
             if !newTimers.isEmpty {
                 for timer in newTimers {
-                    sequence.addTimer(timer)
+                    // First, make sure the timer isn't already in the sequence
+                    if !sequence.timers.contains(where: { $0.id == timer.id }) {
+                        // Add it to the end of the list
+                        sequence.addTimer(timer)
+                    }
                 }
                 save()
+                
+                // Refresh the UI if needed
+                HapticManager.shared.successFeedback()
             }
         } catch {
             print("Error fetching new timer: \(error)")
