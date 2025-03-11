@@ -35,22 +35,22 @@ enum AppTheme {
     /// Font styles for the app
     enum Typography {
         /// Font for large titles
-        static let largeTitle = Font.system(size: 34, weight: .bold, design: .default)
+        static let largeTitle = Font.poppinsBold(size: 34)
         
         /// Font for titles
-        static let title = Font.system(size: 28, weight: .bold, design: .default)
+        static let title = Font.poppinsBold(size: 28)
         
         /// Font for subtitles
-        static let subtitle = Font.system(size: 22, weight: .semibold, design: .default)
+        static let subtitle = Font.poppinsSemiBold(size: 22)
         
         /// Font for body text
-        static let body = Font.system(size: 17, weight: .regular, design: .default)
+        static let body = Font.poppinsRegular(size: 17)
         
         /// Font for captions
-        static let caption = Font.system(size: 14, weight: .regular, design: .default)
+        static let caption = Font.poppinsRegular(size: 14)
         
         /// Font for timer display
-        static let timer = Font.system(size: 60, weight: .thin, design: .default)
+        static let timer = Font.poppinsThin(size: 60)
     }
     
     /// Layout constants for the app

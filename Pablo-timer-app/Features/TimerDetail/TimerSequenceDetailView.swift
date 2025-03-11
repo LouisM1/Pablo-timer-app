@@ -68,7 +68,7 @@ struct TimerSequenceDetailView: View {
         
         var title: String {
             switch self {
-            case .play: return "Start Sequence"
+            case .play: return "Start"
             case .add: return "Add Timer"
             case .delete: return "Delete Sequence"
             case .duplicate: return "Duplicate Sequence"

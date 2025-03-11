@@ -205,12 +205,11 @@ private struct TimerPreviewChip: View {
     var body: some View {
         VStack(spacing: 2) {
             Text(timer.title)
-                .font(.caption2)
-                .fontWeight(.medium)
+                .font(Font.poppinsMedium(size: 11)) // Using caption2 size (~11pt) with Poppins
                 .foregroundColor(AppTheme.Colors.text)
             
             Text(timer.formattedDuration)
-                .font(.caption2)
+                .font(Font.poppinsRegular(size: 11)) // Using caption2 size (~11pt) with Poppins
                 .foregroundColor(AppTheme.Colors.textSecondary)
         }
         .padding(.horizontal, 8)

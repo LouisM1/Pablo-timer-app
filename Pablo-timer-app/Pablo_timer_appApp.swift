@@ -23,6 +23,9 @@ struct Pablo_timer_appApp: App {
     @UIApplicationDelegateAdaptor private var appDelegate: AppDelegate
     
     init() {
+        // Register custom fonts
+        FontSystem.registerFonts()
+        
         // The migration check is performed in the PersistenceController initialization
         // This is just for documentation purposes
         #if DEBUG
