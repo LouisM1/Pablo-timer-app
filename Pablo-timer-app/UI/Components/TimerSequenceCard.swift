@@ -91,7 +91,7 @@ struct TimerSequenceCard: View {
             // Card content - this moves with the swipe
             Button(action: onTap) {
                 VStack(alignment: .leading, spacing: AppTheme.Layout.paddingSmall) {
-                    // Title row with play button and total time
+                    // Title row and duration
                     HStack {
                         if isInEditMode {
                             Image(systemName: "line.3.horizontal")
@@ -105,6 +105,20 @@ struct TimerSequenceCard: View {
                         
                         Spacer()
                         
+                        // Total duration
+                        Text(sequence.formattedTotalDuration)
+                            .font(AppTheme.Typography.body)
+                            .foregroundColor(AppTheme.Colors.textSecondary)
+                    }
+                    
+                    // Timer count and info with play button
+                    HStack {
+                        Text("\(sequence.timers.count) timer\(sequence.timers.count == 1 ? "" : "s")")
+                            .font(AppTheme.Typography.caption)
+                            .foregroundColor(AppTheme.Colors.textSecondary)
+                        
+                        Spacer()
+                        
                         // Only show play button when not in edit mode
                         if !isInEditMode {
                             Button(action: {
@@ -114,25 +128,15 @@ struct TimerSequenceCard: View {
                                 Image(systemName: isRunning ? "pause.fill" : "play.fill")
                                     .font(.title3)
                                     .foregroundColor(AppTheme.Colors.accentSecondary)
-                                    .frame(width: 44, height: 44)
+                                    .frame(width: 40, height: 40)
                                     .background(
                                         Circle()
                                             .fill(AppTheme.Colors.accentSecondary.opacity(0.1))
                                     )
                             }
                             .buttonStyle(PlainButtonStyle())
-                            .padding(.trailing, 8)
                         }
-                        
-                        Text(sequence.formattedTotalDuration)
-                            .font(AppTheme.Typography.body)
-                            .foregroundColor(AppTheme.Colors.textSecondary)
                     }
-                    
-                    // Timer count and info
-                    Text("\(sequence.timers.count) timer\(sequence.timers.count == 1 ? "" : "s")")
-                        .font(AppTheme.Typography.caption)
-                        .foregroundColor(AppTheme.Colors.textSecondary)
                     
                     // Progress bar (only visible when sequence is running)
                     if isRunning {
