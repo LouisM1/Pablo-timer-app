@@ -15,6 +15,9 @@ struct TimerDetailView: View {
     /// Whether the view is being presented
     @Environment(\.dismiss) private var dismiss
     
+    /// Environment value to detect when user is going back
+    @Environment(\.presentationMode) private var presentationMode
+    
     /// State for the timer title
     @State private var title: String
     
@@ -58,16 +61,6 @@ struct TimerDetailView: View {
                     .navigationTitle("Edit Timer")
                     .navigationBarTitleDisplayMode(.inline)
                     .toolbar {
-                        ToolbarItem(placement: .cancellationAction) {
-                            Button("Cancel") {
-                                if hasChanges {
-                                    showingDiscardAlert = true
-                                } else {
-                                    dismiss()
-                                }
-                            }
-                        }
-                        
                         ToolbarItem(placement: .confirmationAction) {
                             Button("Save") {
                                 saveChanges()
@@ -75,30 +68,26 @@ struct TimerDetailView: View {
                             }
                         }
                     }
+                    .interactiveDismissDisabled(hasChanges)
             } else {
-                NavigationStack {
-                    content
-                        .navigationTitle("Edit Timer")
-                        .navigationBarTitleDisplayMode(.inline)
-                        .toolbar {
-                            ToolbarItem(placement: .cancellationAction) {
-                                Button("Cancel") {
-                                    if hasChanges {
-                                        showingDiscardAlert = true
-                                    } else {
-                                        dismiss()
-                                    }
-                                }
-                            }
-                            
-                            ToolbarItem(placement: .confirmationAction) {
-                                Button("Save") {
-                                    saveChanges()
-                                    dismiss()
-                                }
+                content
+                    .navigationTitle("Edit Timer")
+                    .navigationBarTitleDisplayMode(.inline)
+                    .toolbar {
+                        ToolbarItem(placement: .confirmationAction) {
+                            Button("Save") {
+                                saveChanges()
+                                dismiss()
                             }
                         }
-                }
+                    }
+                    .interactiveDismissDisabled(hasChanges)
+                    .onDisappear {
+                        // If we're navigating away, save changes automatically
+                        if hasChanges {
+                            saveChanges()
+                        }
+                    }
             }
         }
         .alert("Discard Changes?", isPresented: $showingDiscardAlert) {

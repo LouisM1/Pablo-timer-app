@@ -74,7 +74,7 @@ struct TimerSequenceDetailView: View {
             case .duplicate: return "Duplicate Sequence"
             case .rename: return "Rename Sequence"
             case .repeat: return "Repeat Sequence"
-            case .schedule: return "Schedule Sequence"
+            case .schedule: return "Schedule"
             }
         }
         
@@ -285,7 +285,7 @@ struct TimerSequenceDetailView: View {
                     Button {
                         isScheduleSequencePresented = true
                     } label: {
-                        Label("Schedule Sequence", systemImage: "calendar")
+                        Label("Schedule", systemImage: "calendar")
                     }
                     
                     Button(role: .destructive) {
