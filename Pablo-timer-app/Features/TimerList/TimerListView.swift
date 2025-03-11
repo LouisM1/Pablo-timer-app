@@ -21,6 +21,9 @@ struct TimerListView: View {
     /// Whether the list is in edit mode (for reordering)
     @State private var isEditMode: EditMode = .inactive
     
+    /// Selected sequence for navigation
+    @State private var selectedSequence: TimerSequenceModel?
+    
     /// Initializes the view with a model context
     /// - Parameter modelContext: The SwiftData model context
     init(modelContext: ModelContext) {
@@ -88,32 +91,34 @@ struct TimerListView: View {
                     } else {
                         List {
                             ForEach(viewModel.timerSequences) { sequence in
-                                TimerSequenceCard(
-                                    sequence: sequence,
-                                    modelContext: viewModel.modelContext,
-                                    onTap: {
-                                        // Only navigate when not in edit mode
-                                        if isEditMode == .inactive {
-                                            // Navigate to timer detail/start view
-                                            print("Tapped on sequence: \(sequence.name)")
-                                        }
-                                    },
-                                    onDelete: {
-                                        // Show confirmation dialog
-                                        timerToDelete = sequence
-                                        isShowingDeleteConfirmation = true
-                                    },
-                                    onPlay: {
-                                        // Toggle play/pause for this sequence
-                                        if viewModel.isSequenceRunning(sequence) {
-                                            viewModel.pauseSequence()
-                                        } else {
-                                            viewModel.startSequence(sequence)
-                                        }
-                                    },
-                                    isRunning: viewModel.isSequenceRunning(sequence),
-                                    progress: viewModel.progressForSequence(sequence)
-                                )
+                                NavigationLink(
+                                    destination: TimerSequenceDetailView(
+                                        sequence: sequence,
+                                        modelContext: viewModel.modelContext
+                                    )
+                                ) {
+                                    TimerSequenceCard(
+                                        sequence: sequence,
+                                        modelContext: viewModel.modelContext,
+                                        onTap: { },
+                                        onDelete: {
+                                            // Show confirmation dialog
+                                            timerToDelete = sequence
+                                            isShowingDeleteConfirmation = true
+                                        },
+                                        onPlay: {
+                                            // Toggle play/pause for this sequence
+                                            if viewModel.isSequenceRunning(sequence) {
+                                                viewModel.pauseSequence()
+                                            } else {
+                                                viewModel.startSequence(sequence)
+                                            }
+                                        },
+                                        isRunning: viewModel.isSequenceRunning(sequence),
+                                        progress: viewModel.progressForSequence(sequence)
+                                    )
+                                }
+                                .buttonStyle(PlainButtonStyle())
                                 .listRowSeparator(.hidden)
                                 .listRowBackground(Color.clear)
                                 .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
